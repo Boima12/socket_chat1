@@ -37,65 +37,28 @@ public class ChatClient {
     }
 
     private void connect() throws IOException {
-        socket = new Socket(host, port);
-        reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        writer = new PrintWriter(socket.getOutputStream(), true);
-
-        // send username as first line
-        writer.println(username);
-
-        // start receiver
-        receiverThread = new Thread(this::receiveLoop, "chat-client-receiver");
-        receiverThread.start();
+    	// TODO implement connect()
     }
 
     private void receiveLoop() {
-        try {
-            String line;
-            while (socket != null && !socket.isClosed() && (line = reader.readLine()) != null) {
-                Message msg = Message.fromJson(line);
-                ui.onMessage(msg);
-            }
-        } catch (IOException e) {
-            // connection closed/failed
-        } finally {
-            close();
-            ui.onDisconnected();
-        }
+    	// TODO implement receiveLoop()
     }
 
     public void sendText(String text) {
-        if (writer != null) {
-            Message msg = new Message(Message.Type.TEXT, username, text);
-            writer.println(msg.toJson());
-        }
+    	// TODO implement sendText()
     }
     
     public void sendImage(File file) {
-        if (writer != null && file != null) {
-            try {
-                byte[] data = Files.readAllBytes(file.toPath());
-                String base64 = Base64.getEncoder().encodeToString(data);
-
-                Message msg = new Message(Message.Type.IMAGE, username, base64);
-                writer.println(msg.toJson());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+    	// TODO implement sendImage()
     }
 
     public void close() {
-        try {
-            if (socket != null && !socket.isClosed())
-                socket.close();
-        } catch (IOException ignored) {
-        }
-        Utils.safeClose(reader);
-        Utils.safeClose(writer);
+    	// TODO implement close()
     }
 
     public boolean isConnected() {
-        return socket != null && socket.isConnected() && !socket.isClosed();
+    	// TODO implement isConnected()
+    	
+    	return true;
     }
 }
