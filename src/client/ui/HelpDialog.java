@@ -14,6 +14,7 @@ public class HelpDialog {
 		ta.setWrapStyleWord(true);
 		JScrollPane sp = new JScrollPane(ta);
 		sp.setPreferredSize(new Dimension(460, 200));
+		
 		JOptionPane.showMessageDialog(parent, sp, "Help", JOptionPane.PLAIN_MESSAGE);
 	}
 }

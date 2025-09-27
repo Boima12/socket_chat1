@@ -2,15 +2,16 @@ package client.ui;
 
 import client.ChatClient;
 import common.Constants;
+import common.Message;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.EtchedBorder;
-import javax.swing.border.SoftBevelBorder;
-import javax.swing.border.BevelBorder;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 import java.io.IOException;
+import java.util.Base64;
 
 public class MainUI extends JFrame {
     private static final long serialVersionUID = 1L;
@@ -19,13 +20,15 @@ public class MainUI extends JFrame {
     private JTextField tfAddress;
     private JButton btnConnect;
     private JButton btnDisconnect;
-    private JTextArea taChat;
+    private JPanel chatPanel;
+    private JScrollPane chatScroll;
     private JTextArea taInput;
     private JButton btnSend;
 
     private ChatClient client;
     private String username;
     private boolean isChatting = false;
+    private JButton btnImageSend;
 
     public static void main(String[] args) {
         EventQueue.invokeLater(() -> {
@@ -123,18 +126,16 @@ public class MainUI extends JFrame {
         rightPanel.setBounds(445, 10, 701, 693);
         rightPanel.setLayout(null);
         contentPane.add(rightPanel);
-
-        taChat = new JTextArea();
-        taChat.setEditable(false);
-        taChat.setBorder(new SoftBevelBorder(BevelBorder.LOWERED, null, null, null, null));
-        taChat.setBackground(new Color(219, 219, 219));
-        taChat.setFont(new Font("Tahoma", Font.PLAIN, 14));
-        taChat.setWrapStyleWord(true);
-        taChat.setLineWrap(true);
-        JScrollPane spChat = new JScrollPane(taChat);
-        spChat.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        spChat.setBounds(0, 0, 701, 640);
-        rightPanel.add(spChat);
+        
+        chatPanel = new JPanel();
+        chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
+        chatPanel.setAlignmentY(Component.TOP_ALIGNMENT);
+        chatPanel.setBackground(new Color(226, 226, 226));
+        chatScroll = new JScrollPane(chatPanel);
+        chatScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        chatScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        chatScroll.setBounds(0, 0, 701, 640);
+        rightPanel.add(chatScroll);
 
         taInput = new JTextArea();
         taInput.setEnabled(false);
@@ -154,14 +155,22 @@ public class MainUI extends JFrame {
         });
         JScrollPane spInput = new JScrollPane(taInput);
         spInput.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        spInput.setBounds(0, 639, 609, 54);
+        spInput.setBounds(0, 639, 508, 54);
         rightPanel.add(spInput);
 
-        btnSend = new JButton("Send");
+        btnSend = new JButton("");
         btnSend.setEnabled(false);
         btnSend.setBounds(606, 639, 95, 54);
+        btnSend.setIcon(new ImageIcon(new ImageIcon(MainUI.class.getResource("/Images/send.png")).getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH)));
         btnSend.addActionListener(e -> sendMessage());
         rightPanel.add(btnSend);
+        
+        btnImageSend = new JButton("");
+        btnImageSend.setEnabled(false);
+        btnImageSend.setBounds(510, 639, 95, 54);
+        btnImageSend.setIcon(new ImageIcon(new ImageIcon(MainUI.class.getResource("/Images/attach.png")).getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH)));
+        btnImageSend.addActionListener(e -> sendImage());
+        rightPanel.add(btnImageSend);
 
         // === Ask username at startup ===
         askUsername("Login");
@@ -188,9 +197,21 @@ public class MainUI extends JFrame {
         String msg = taInput.getText().trim();
         if (msg.isEmpty()) return;
 
-        client.send(msg);
+        client.sendText(msg);
         taInput.setText("");
     }
+    
+    private void sendImage() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Select an image to send");
+        int result = chooser.showOpenDialog(this);
+
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File file = chooser.getSelectedFile();
+            client.sendImage(file);
+        }
+    }
+
 
     private void disconnect() {
         chatModeOff();
@@ -206,8 +227,8 @@ public class MainUI extends JFrame {
         tfAddress.setEnabled(false);
         btnDisconnect.setEnabled(true);
         taInput.setEnabled(true);
-        taChat.setBackground(new Color(249, 249, 249));
         btnSend.setEnabled(true);
+        btnImageSend.setEnabled(true);
     }
 
     private void chatModeOff() {
@@ -216,13 +237,87 @@ public class MainUI extends JFrame {
         tfAddress.setEnabled(true);
         btnDisconnect.setEnabled(false);
         taInput.setEnabled(false);
-        taChat.setBackground(new Color(219, 219, 219));
         btnSend.setEnabled(false);
+        btnImageSend.setEnabled(false);
     }
 
-    // === These replace MessageListener ===
-    public void onMessage(String line) {
-        SwingUtilities.invokeLater(() -> taChat.append(line + "\n"));
+    
+    public void onMessage(Message msg) {
+        SwingUtilities.invokeLater(() -> {
+            switch (msg.type) {
+                case TEXT -> addTextMessage(msg.sender, msg.content);
+                case IMAGE -> addImageMessage(msg.sender, msg.content);
+                case SYSTEM -> addTextMessage(msg.sender, msg.content);
+            }
+        });
+    }
+    
+    // Helper to add message type
+    private void addTextMessage(String sender, String message) {
+        JPanel msgPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0)) {
+        	private static final long serialVersionUID = 1L;	// dòng này cho thêm vô cho đỡ bị warning chứ cũng không làm gì
+        	
+            @Override
+            public Dimension getMaximumSize() {
+                return getPreferredSize(); 
+            }
+        };
+        msgPanel.setBackground(Color.WHITE);
+        msgPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); // padding inside
+
+        JLabel lbl = new JLabel("<html><b>" + sender + ":</b> " + message + "</html>");
+        msgPanel.add(lbl);
+        
+        msgPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // add to chatPanel
+        chatPanel.add(msgPanel);
+        chatPanel.revalidate();
+        chatPanel.repaint();
+
+        // auto scroll
+        JScrollBar vertical = chatScroll.getVerticalScrollBar();
+        vertical.setValue(vertical.getMaximum());
+    }
+
+    private void addImageMessage(String sender, String base64Data) {
+        JPanel msgPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0)) {
+        	private static final long serialVersionUID = 1L;	// dòng này cho thêm vô cho đỡ bị warning chứ cũng không làm gì
+        	
+            @Override
+            public Dimension getMaximumSize() {
+                return getPreferredSize(); // no stretching
+            }
+        };
+        msgPanel.setBackground(Color.WHITE);
+        msgPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        msgPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Sender label
+        JLabel lbl = new JLabel("<html><b>" + sender + ":</b></html>");
+        msgPanel.add(lbl);
+
+        try {
+            byte[] data = Base64.getDecoder().decode(base64Data);
+            ImageIcon icon = new ImageIcon(data);
+
+            // Scale to 300x300 max
+            Image scaled = icon.getImage().getScaledInstance(300, 300, Image.SCALE_SMOOTH);
+            JLabel imgLbl = new JLabel(new ImageIcon(scaled));
+
+            msgPanel.add(imgLbl);
+        } catch (Exception e) {
+            msgPanel.add(new JLabel("[Image load failed]"));
+        }
+
+        // add to chatPanel
+        chatPanel.add(msgPanel);
+        chatPanel.revalidate();
+        chatPanel.repaint();
+
+        // auto scroll
+        JScrollBar vertical = chatScroll.getVerticalScrollBar();
+        vertical.setValue(vertical.getMaximum());
     }
 
     public void onDisconnected() {

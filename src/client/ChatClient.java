@@ -4,9 +4,13 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.io.File;
+import java.util.Base64;
+import java.nio.file.Files;
 import java.net.Socket;
 
 import client.ui.MainUI;
+import common.Message;
 import common.Utils;
 
 public class ChatClient {
@@ -49,7 +53,8 @@ public class ChatClient {
         try {
             String line;
             while (socket != null && !socket.isClosed() && (line = reader.readLine()) != null) {
-                ui.onMessage(line);
+                Message msg = Message.fromJson(line);
+                ui.onMessage(msg);
             }
         } catch (IOException e) {
             // connection closed/failed
@@ -59,9 +64,24 @@ public class ChatClient {
         }
     }
 
-    public void send(String text) {
+    public void sendText(String text) {
         if (writer != null) {
-            writer.println(text);
+            Message msg = new Message(Message.Type.TEXT, username, text);
+            writer.println(msg.toJson());
+        }
+    }
+    
+    public void sendImage(File file) {
+        if (writer != null && file != null) {
+            try {
+                byte[] data = Files.readAllBytes(file.toPath());
+                String base64 = Base64.getEncoder().encodeToString(data);
+
+                Message msg = new Message(Message.Type.IMAGE, username, base64);
+                writer.println(msg.toJson());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
