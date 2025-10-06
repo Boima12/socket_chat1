@@ -57,14 +57,13 @@ public class ChatServer {
 	}
 
 	/** Broadcast a line to every connected client (non-blocking for loop). */
-	public static void broadcast(String line) {
-		for (ClientHandler h : handlers) {
-			if (!h.send(line)) {
-				// If send failed, handler is responsible for cleanup
-				h.shutdown();
-			}
-		}
-	}
+    public static void broadcast(String msg) {
+        for (ClientHandler h : handlers) {
+            if (!h.send(msg)) {
+                h.shutdown();
+            }
+        }
+    }
 
 	public static void main(String[] args) throws Exception {
 		int port = Constants.PORT;

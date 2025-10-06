@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
+import common.Message;
 import common.Utils;
 
 public class ClientHandler implements Runnable {
@@ -25,6 +26,7 @@ public class ClientHandler implements Runnable {
 		try {
 			reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			writer = new PrintWriter(socket.getOutputStream(), true);
+			Message msg;
 
 			// First line from client should be the username
 			String nameLine = reader.readLine();
@@ -34,15 +36,18 @@ public class ClientHandler implements Runnable {
 				username = nameLine.trim();
 			}
 
+			// connect notification
 			System.out.println(username + " connected from " + socket.getRemoteSocketAddress());
-			ChatServer.broadcast("[Server]: " + username + " has joined the chat.");
+			msg = new Message(Message.Type.SYSTEM, "Server", username + " has joined the chat.");
+			ChatServer.broadcast(msg.toJson());
 
 			String line;
 			while (active && (line = reader.readLine()) != null) {
 				if (line.equalsIgnoreCase("/quit") || !socket.isConnected()) {
 					break;
 				}
-				ChatServer.broadcast("[" + username + "]: " + line);
+//			    msg = Message.fromJson(line);
+			    ChatServer.broadcast(line);
 			}
 
 		} catch (IOException e) {
@@ -72,7 +77,10 @@ public class ClientHandler implements Runnable {
 		try {
 			ChatServer.handlers.remove(this);
 			System.out.println(username + " disconnected.");
-			ChatServer.broadcast("[Server]: " + username + " has left the chat.");
+			
+			Message msg = new Message(Message.Type.SYSTEM, "Server", username + " has left the chat.");
+			ChatServer.broadcast(msg.toJson());
+			
 			Utils.safeClose(reader);
 			Utils.safeClose(writer);
 			if (socket != null && !socket.isClosed())
